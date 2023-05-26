@@ -86,9 +86,9 @@ describe('/comment endpoint', () => {
         method: 'POST',
         url: '/threads/thread-123/comments',
         payload: requestPayload,
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
+        // headers: {
+        //   Authorization: `Bearer ${accessToken}`
+        // }
       });
 
       // Assert
