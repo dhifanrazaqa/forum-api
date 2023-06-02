@@ -1,9 +1,11 @@
 const pool = require('../../database/postgres/pool');
+
 const CommentTableTestHelper = require('../../../../tests/CommentTableTestHelper');
 const UsersTableTestHelper = require('../../../../tests/UsersTableTestHelper');
 const AuthenticationsTableTestHelper = require('../../../../tests/AuthenticationsTableTestHelper');
 const ThreadTableTestHelper = require('../../../../tests/ThreadTableTestHelper');
 const TokenTestHelper = require('../../../../tests/TokenTestHelper');
+
 const container = require('../../container');
 const createServer = require('../createServer');
 
@@ -16,17 +18,18 @@ describe('/comment endpoint', () => {
     await CommentTableTestHelper.cleanTable();
     await UsersTableTestHelper.cleanTable();
     await AuthenticationsTableTestHelper.cleanTable();
+    await ThreadTableTestHelper.cleanTable();
   });
 
   describe('when POST /comments', () => {
-    it('should response 201 and persisted user', async () => {
+    it('should response 201 and persisted comment', async () => {
       // Arrange
       const requestPayload = {
         content: 'lorem ipsum dolor amet',
       };
       const server = await createServer(container);
 
-      const { accessToken, userId } = await TokenTestHelper.getAccessTokenAndUserId({ server, username:"budi" })
+      const { accessToken, userId } = await TokenTestHelper.getAccessTokenAndUserId({ server, username: 'budi' });
 
       const threadId = 'thread-123';
 
@@ -37,8 +40,8 @@ describe('/comment endpoint', () => {
         url: `/threads/${threadId}/comments`,
         payload: requestPayload,
         headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
 
       // Assert
@@ -64,7 +67,7 @@ describe('/comment endpoint', () => {
       // action
       const response = await server.inject({
         method: 'POST',
-        url: `/threads/thread-123/comments`,
+        url: '/threads/thread-123/comments',
         payload: requestPayload,
       });
 
@@ -79,16 +82,18 @@ describe('/comment endpoint', () => {
       const requestPayload = {};
       const server = await createServer(container);
 
-      const { accessToken } = await TokenTestHelper.getAccessTokenAndUserId({ server, username:"budi" })
+      const { accessToken, userId } = await TokenTestHelper.getAccessTokenAndUserId({ server, username: 'budi' });
 
+      const threadId = 'thread-123';
+      await ThreadTableTestHelper.addThread({ id: threadId, owner: userId });
       // Action
       const response = await server.inject({
         method: 'POST',
-        url: '/threads/thread-123/comments',
+        url: `/threads/${threadId}/comments`,
         payload: requestPayload,
-        // headers: {
-        //   Authorization: `Bearer ${accessToken}`
-        // }
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
 
       // Assert
@@ -98,31 +103,127 @@ describe('/comment endpoint', () => {
       expect(responseJson.message).toEqual('tidak dapat membuat comment baru karena properti yang dibutuhkan tidak ada');
     });
 
-    // it('should response 400 when request payload not meet data type specification', async () => {
-    //   // Arrange
-    //   const requestPayload = {
-    //     title: 'Lorem Ipsum',
-    //     body: true,
-    //   };
-    //   const server = await createServer(container);
+    it('should response 400 when request payload not meet data type specification', async () => {
+      // Arrange
+      const requestPayload = {
+        content: true,
+      };
+      const server = await createServer(container);
 
-    //   const { accessToken } = await TokenTestHelper.getAccessTokenAndUserId({ server, username:"budi" })
+      const { accessToken, userId } = await TokenTestHelper.getAccessTokenAndUserId({ server, username: 'budi' });
 
-    //   // Action
-    //   const response = await server.inject({
-    //     method: 'POST',
-    //     url: '/comments',
-    //     payload: requestPayload,
-    //     headers: {
-    //       Authorization: `Bearer ${accessToken}`
-    //     }
-    //   });
+      const threadId = 'thread-123';
+      await ThreadTableTestHelper.addThread({ id: threadId, owner: userId });
+      // Action
+      const response = await server.inject({
+        method: 'POST',
+        url: `/threads/${threadId}/comments`,
+        payload: requestPayload,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-    //   // Assert
-    //   const responseJson = JSON.parse(response.payload);
-    //   expect(response.statusCode).toEqual(400);
-    //   expect(responseJson.status).toEqual('fail');
-    //   expect(responseJson.message).toEqual('tidak dapat membuat comment baru karena tipe data tidak sesuai');
-    // });
+      // Assert
+      const responseJson = JSON.parse(response.payload);
+      expect(response.statusCode).toEqual(400);
+      expect(responseJson.status).toEqual('fail');
+      expect(responseJson.message).toEqual('tidak dapat membuat comment baru karena tipe data tidak sesuai');
+    });
+  });
+
+  describe('when DELETE /threads/{threadId}/comments/{commentId}', () => {
+    it('should response 200 and delete comment', async () => {
+      // Arrange
+      const requestParams = {
+        threadId: 'thread-123',
+        commentId: 'comment-123',
+      };
+
+      const server = await createServer(container);
+
+      const { accessToken, userId } = await TokenTestHelper.getAccessTokenAndUserId({ server, username: 'budi' });
+
+      await ThreadTableTestHelper.addThread({ id: requestParams.threadId, owner: userId });
+      await CommentTableTestHelper.addComment({
+        id: requestParams.commentId, threadId: requestParams.threadId, owner: userId,
+      });
+
+      // Action
+      const response = await server.inject({
+        method: 'DELETE',
+        url: `/threads/${requestParams.threadId}/comments/${requestParams.commentId}`,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      // Assert
+      const responseJson = JSON.parse(response.payload);
+      expect(response.statusCode).toEqual(200);
+      expect(responseJson.status).toEqual('success');
+    });
+
+    it('should response 403 when not comment owner', async () => {
+      // Arrange
+      const requestParams = {
+        threadId: 'thread-234',
+        commentId: 'comment-234',
+      };
+
+      const server = await createServer(container);
+
+      const { userId: userId1 } = await TokenTestHelper.getAccessTokenAndUserId({ server, username: 'budi' });
+      const { accessToken: accessToken2 } = await TokenTestHelper.getAccessTokenAndUserId({ server, username: 'andi' });
+
+      await ThreadTableTestHelper.addThread({ id: requestParams.threadId, owner: userId1 });
+      await CommentTableTestHelper.addComment({
+        id: requestParams.commentId, threadId: requestParams.threadId, owner: userId1,
+      });
+
+      // Action
+      const response = await server.inject({
+        method: 'DELETE',
+        url: `/threads/${requestParams.threadId}/comments/${requestParams.commentId}`,
+        headers: {
+          Authorization: `Bearer ${accessToken2}`,
+        },
+      });
+
+      // Assert
+      const responseJson = JSON.parse(response.payload);
+      expect(response.statusCode).toEqual(403);
+      expect(responseJson.status).toEqual('fail');
+      expect(responseJson.message).toBeDefined();
+    });
+
+    it('should response 404 when comment not found', async () => {
+      // Arrange
+      const requestParams = {
+        threadId: 'thread-234',
+        commentId: 'comment-234',
+      };
+
+      const server = await createServer(container);
+
+      const { accessToken, userId } = await TokenTestHelper.getAccessTokenAndUserId({ server, username: 'budi' });
+
+      await ThreadTableTestHelper.addThread({ id: requestParams.threadId, owner: userId });
+
+      // Action
+      const response = await server.inject({
+        method: 'DELETE',
+        url: `/threads/${requestParams.threadId}/comments/${requestParams.commentId}`,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      // Assert
+      const responseJson = JSON.parse(response.payload);
+      expect(response.statusCode).toEqual(404);
+      expect(responseJson.status).toEqual('fail');
+      expect(responseJson.message).toBeDefined();
+    });
   });
 });

@@ -1,11 +1,11 @@
 const AddedThread = require('../AddedThread');
 
-describe('a AddedThread Entities', () => { 
+describe('a AddedThread Entities', () => {
   it('should throw error when payload did not contain needed property', () => {
     const payload = {
       title: 'Lorem ipsum',
       owner: 'user-123',
-    }
+    };
 
     expect(() => new AddedThread(payload)).toThrowError('ADDED_THREAD.NOT_CONTAIN_NEEDED_PROPERTY');
   });

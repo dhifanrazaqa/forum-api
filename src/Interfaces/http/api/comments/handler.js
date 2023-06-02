@@ -1,21 +1,21 @@
 const AddCommentUseCase = require('../../../../Applications/use_case/AddCommentUseCase');
-const AuthenticationError = require('../../../../Commons/exceptions/AuthenticationError');
+const DeleteCommentUseCase = require('../../../../Applications/use_case/DeleteCommentUseCase');
 
 class CommentsHandler {
   constructor(container) {
     this._container = container;
 
     this.postCommentHandler = this.postCommentHandler.bind(this);
+    this.deleteCommentHandler = this.deleteCommentHandler.bind(this);
   }
 
   async postCommentHandler(request, h) {
-    const headerAuthorization = this.getToken(request.headers.authorization);
+    const { id: credentialId } = request.auth.credentials;
 
     const addCommentUseCase = this._container.getInstance(AddCommentUseCase.name);
-    const addedComment = await addCommentUseCase.execute(
-      request.payload, request.params, headerAuthorization
-    );
-    
+    const addedComment = await addCommentUseCase
+      .execute(request.payload, request.params, credentialId);
+
     const response = h.response({
       status: 'success',
       data: {
@@ -26,12 +26,19 @@ class CommentsHandler {
     return response;
   }
 
-  getToken(header) {
-    if (!header) {
-      throw new AuthenticationError('Missing authentication');
-    }
-    const token = header.split(" ")[1];
-    return token;
+  async deleteCommentHandler(request, h) {
+    const { id: credentialId } = request.auth.credentials;
+
+    const deleteCommentUseCase = this._container.getInstance(DeleteCommentUseCase.name);
+
+    await deleteCommentUseCase
+      .execute(request.params, credentialId);
+
+    const response = h.response({
+      status: 'success',
+    });
+    response.code(200);
+    return response;
   }
 }
 

@@ -6,7 +6,7 @@ class AddThread {
 
     this.title = title;
     this.body = body;
-    this.owner = owner
+    this.owner = owner;
   }
 
   _verifyPayload({ title, body, owner }) {

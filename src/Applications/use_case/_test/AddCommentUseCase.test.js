@@ -3,7 +3,6 @@ const AddedComment = require('../../../Domains/comments/entities/AddedComment');
 const CommentRepository = require('../../../Domains/comments/CommentRepository');
 const ThreadRepository = require('../../../Domains/threads/ThreadRepository');
 const AddCommentUseCase = require('../AddCommentUseCase');
-const AuthenticationTokenManager = require('../../security/AuthenticationTokenManager');
 
 describe('AddCommentUseCase', () => {
   /**
@@ -13,58 +12,51 @@ describe('AddCommentUseCase', () => {
     // Arrange
     const useCasePayload = {
       content: 'Lorem ipsum',
-      threadId: 'thread-123',
-      owner: 'user-123'
     };
 
     const useCaseParam = {
       threadId: 'thread-123',
     };
 
-    const authToken = 'Bearer Token'
+    const credentialId = 'user-123';
 
     const mockAddedComment = new AddedComment({
       id: 'comment-123',
       content: useCasePayload.content,
-      owner: 'user-123',
+      owner: credentialId,
     });
 
     /** creating dependency of use case */
     const mockThreadRepository = new ThreadRepository();
     const mockCommentRepository = new CommentRepository();
-    const mockAuthenticationTokenManager = new AuthenticationTokenManager();
 
     /** mocking needed function */
-    mockThreadRepository.getThreadById = jest.fn()
+    mockThreadRepository.isThreadExist = jest.fn()
       .mockImplementation(() => Promise.resolve());
     mockCommentRepository.addComment = jest.fn()
       .mockImplementation(() => Promise.resolve(mockAddedComment));
-
-    mockAuthenticationTokenManager.verifyAccessToken = jest.fn()
-      .mockImplementation(() => Promise.resolve());
-    mockAuthenticationTokenManager.decodePayload = jest.fn()
-      .mockImplementation(() => Promise.resolve({username: 'budi', id:mockAddedComment.owner}));
 
     /** creating use case instance */
     const getCommentUseCase = new AddCommentUseCase({
       threadRepository: mockThreadRepository,
       commentRepository: mockCommentRepository,
-      authenticationTokenManager: mockAuthenticationTokenManager
     });
 
     // Action
-    const addedComment = await getCommentUseCase.execute(useCasePayload, useCaseParam, authToken);
+    const addedComment = await getCommentUseCase
+      .execute(useCasePayload, useCaseParam, credentialId);
+
     // Assert
     expect(addedComment).toStrictEqual(new AddedComment({
       id: 'comment-123',
       content: useCasePayload.content,
-      owner: useCasePayload.owner,
+      owner: credentialId,
     }));
-
+    expect(mockThreadRepository.isThreadExist).toBeCalledWith(useCaseParam.threadId);
     expect(mockCommentRepository.addComment).toBeCalledWith(new AddComment({
       content: useCasePayload.content,
-      threadId: useCasePayload.threadId,
-      owner: useCasePayload.owner,
+      threadId: useCaseParam.threadId,
+      owner: credentialId,
     }));
   });
 });

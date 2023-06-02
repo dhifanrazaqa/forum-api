@@ -1,11 +1,11 @@
 const AddedComment = require('../AddedComment');
 
-describe('a AddedComment Entities', () => { 
+describe('a AddedComment Entities', () => {
   it('should throw error when payload did not contain needed property', () => {
     const payload = {
       content: 'Lorem ipsum',
       owner: 'user-123',
-    }
+    };
 
     expect(() => new AddedComment(payload)).toThrowError('ADDED_COMMENT.NOT_CONTAIN_NEEDED_PROPERTY');
   });
@@ -35,7 +35,7 @@ describe('a AddedComment Entities', () => {
 
     // Assert
     expect(addedComment.id).toEqual(payload.id);
-    expect(addedComment.title).toEqual(payload.title);
+    expect(addedComment.content).toEqual(payload.content);
     expect(addedComment.owner).toEqual(payload.owner);
   });
 });

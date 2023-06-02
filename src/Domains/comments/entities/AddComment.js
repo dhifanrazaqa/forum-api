@@ -6,7 +6,7 @@ class AddComment {
 
     this.content = content;
     this.threadId = threadId;
-    this.owner = owner
+    this.owner = owner;
   }
 
   _verifyPayload({ content, threadId, owner }) {

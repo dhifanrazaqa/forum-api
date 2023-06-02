@@ -1,10 +1,16 @@
+require('dotenv').config();
+
 const Hapi = require('@hapi/hapi');
-const ClientError = require('../../Commons/exceptions/ClientError');
-const DomainErrorTranslator = require('../../Commons/exceptions/DomainErrorTranslator');
+const Jwt = require('@hapi/jwt');
+
 const users = require('../../Interfaces/http/api/users');
 const authentications = require('../../Interfaces/http/api/authentications');
-const threads = require('../../Interfaces/http/api/threads')
-const comments = require('../../Interfaces/http/api/comments')
+const threads = require('../../Interfaces/http/api/threads');
+const comments = require('../../Interfaces/http/api/comments');
+const replies = require('../../Interfaces/http/api/replies');
+
+const ClientError = require('../../Commons/exceptions/ClientError');
+const DomainErrorTranslator = require('../../Commons/exceptions/DomainErrorTranslator');
 
 const createServer = async (container) => {
   const server = Hapi.server({
@@ -15,6 +21,28 @@ const createServer = async (container) => {
         origin: ['*'],
       },
     },
+  });
+
+  await server.register([
+    {
+      plugin: Jwt,
+    },
+  ]);
+
+  server.auth.strategy('forumapi_jwt', 'jwt', {
+    keys: process.env.ACCESS_TOKEN_KEY,
+    verify: {
+      aud: false,
+      iss: false,
+      sub: false,
+      maxAgeSec: process.env.ACCESS_TOKEN_AGE,
+    },
+    validate: (artifacts) => ({
+      isValid: true,
+      credentials: {
+        id: artifacts.decoded.payload.id,
+      },
+    }),
   });
 
   await server.register([
@@ -34,12 +62,15 @@ const createServer = async (container) => {
       plugin: comments,
       options: { container },
     },
+    {
+      plugin: replies,
+      options: { container },
+    },
   ]);
 
   server.ext('onPreResponse', (request, h) => {
     // mendapatkan konteks response dari request
     const { response } = request;
-
     if (response instanceof Error) {
       // bila response tersebut error, tangani sesuai kebutuhan
       const translatedError = DomainErrorTranslator.translate(response);

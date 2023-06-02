@@ -1,15 +1,15 @@
 const AddComment = require('../AddComment');
 
-describe('a AddComments entities', () => { 
+describe('a AddComments entities', () => {
   it('should throw error when payload did not contain needed property', () => {
     // Arrange
     const payload = {
-      content: 'abc'
+      content: 'abc',
     };
 
     // Action and Assert
-    expect(() => new AddComment(payload)).toThrowError('ADD_COMMENT.NOT_CONTAIN_NEEDED_PROPERTY')
-  })
+    expect(() => new AddComment(payload)).toThrowError('ADD_COMMENT.NOT_CONTAIN_NEEDED_PROPERTY');
+  });
 
   it('should throw error when payload did not meet data type specification', () => {
     // Arrange

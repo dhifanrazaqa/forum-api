@@ -2,7 +2,7 @@
 exports.up = (pgm) => {
   pgm.createTable('comments', {
     id: {
-      type: 'VARCHAR(18)',
+      type: 'VARCHAR(20)',
       primaryKey: true,
     },
     content: {
@@ -10,17 +10,22 @@ exports.up = (pgm) => {
       notNull: true,
     },
     thread_id: {
-      type: 'TEXT',
+      type: 'VARCHAR(20)',
       notNull: true,
     },
     owner: {
-      type: 'TEXT',
+      type: 'VARCHAR(20)',
       notNull: true,
     },
     is_deleted: {
       type: 'BOOLEAN',
       notNull: true,
       default: false,
+    },
+    date: {
+      type: 'TEXT',
+      notNull: true,
+      default: pgm.func('NOW()'),
     },
   });
 
